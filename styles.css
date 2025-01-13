@@ -1,16 +1,42 @@
 /* styles.css */
 
-/* Example class for your status bar item */
+/* Base status bar styling */
 .idle-monitor-status-bar {
     padding: 0 8px;
-    background: transparent; /* Let plugin logic handle rainbow or specific color if needed */
     cursor: default;
+    /* By default, color is set via a CSS variable. 
+       `currentColor` fallback will use the theme's default if not set. */
+    color: var(--idle-monitor-color, currentColor);
+    background: transparent;
   }
   
-  /* If you want to define a rainbow-mode class or other special classes, you can add more here */
-  .idle-monitor-rainbow-text {
-    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+  /* Rainbow mode: applies a moving rainbow gradient */
+  .idle-monitor-rainbow {
+    /* Use an animation that shifts a large background gradient left to right */
+    animation: rainbow-shift 3s linear infinite;
+    background: linear-gradient(
+      90deg,
+      red,
+      orange,
+      yellow,
+      green,
+      blue,
+      indigo,
+      violet
+    );
+    background-size: 400% 100%;
+    background-clip: text;
     -webkit-background-clip: text;
-    color: transparent;
+    color: transparent; /* reveal the gradient through the text */
+  }
+  
+  /* Keyframes to animate the background position for a "rainbow wave" effect */
+  @keyframes rainbow-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    100% {
+      background-position: 100% 50%;
+    }
   }
   
