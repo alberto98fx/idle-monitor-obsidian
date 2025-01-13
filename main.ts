@@ -6,23 +6,17 @@ import {
 	Setting,
   } from 'obsidian';
   
-  /**
-   * Interface defining the shape of the plugin's settings.
-   */
   interface IdleMonitorSettings {
-	idleThreshold: number;       // Idle time in ms before showing a notification
-	checkInterval: number;       // Interval in ms to check for idle state
+	idleThreshold: number;
+	checkInterval: number;
 	includeMouseActivity: boolean;
 	textColor: string;
 	rainbowMode: boolean;
 	timeFormat24Hour: boolean;
   }
   
-  /**
-   * Default plugin settings.
-   */
   const DEFAULT_SETTINGS: IdleMonitorSettings = {
-	idleThreshold: 1000,          // 1 second
+	idleThreshold: 30000,
 	checkInterval: 1000,
 	includeMouseActivity: true,
 	textColor: '',
@@ -38,34 +32,63 @@ import {
 	private rainbowGradientStep: number;
   
 	/**
-	 * onload() is called by Obsidian when the plugin is loaded.
+	 * A set of keys that will be ignored for resetting idle time.
 	 */
-	public async onload(): Promise<void> {
-	  // Load settings from data.json or use defaults
+	private static readonly IGNORED_KEYS = new Set([
+	  'Shift',
+	  'Meta',
+	  'Control',
+	  'Alt',
+	  'CapsLock',
+	  'ArrowLeft',
+	  'ArrowRight',
+	  'ArrowUp',
+	  'ArrowDown',
+	  'Escape',
+	  'Tab',
+	  'Enter',
+	  'Backspace',
+	  'Delete',
+	  'Insert',
+	  'Home',
+	  'End',
+	  'PageUp',
+	  'PageDown',
+	  // Function keys
+	  'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12',
+	]);
+  
+	async onload(): Promise<void> {
 	  await this.loadSettings();
   
 	  this.lastActivityTime = Date.now();
 	  this.rainbowGradientStep = 0;
   
-	  // Initialize idle detection and UI elements
+	  // Initialize idle detection
 	  this.detectActivity();
+  
+	  // Create and configure status bar item
 	  this.statusBarItem = this.addStatusBarItem();
 	  this.statusBarItem.addEventListener('mouseenter', this.showLastActivityTime.bind(this));
 	  this.updateStatusBarColor();
 	  this.statusBarItem.setText('All caught up!');
   
-	  // Add the settings tab to Obsidian’s settings panel
+	  // Optional ribbon icon
+	  const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', () => {
+		new Notice('This is a notice!');
+	  });
+	  ribbonIconEl.addClass('my-plugin-ribbon-class');
+  
+	  // Add settings tab
 	  this.addSettingTab(new IdleNotifierSettingTab(this.app, this));
 	}
   
-	/**
-	 * onunload() is called by Obsidian when the plugin is unloaded.
-	 * Clean up any event listeners and intervals to avoid memory leaks.
-	 */
-	public onunload(): void {
-	  document.removeEventListener('keydown', this.resetActivityBound);
+	onunload(): void {
+	  // Remove event listeners
+	  document.removeEventListener('keydown', this.detectKeyboardActivityBound);
 	  document.removeEventListener('mousemove', this.resetActivityBound);
   
+	  // Clear the idle check interval
 	  if (this.checkIdleIntervalId !== null) {
 		clearInterval(this.checkIdleIntervalId);
 		this.checkIdleIntervalId = null;
@@ -73,18 +96,35 @@ import {
 	}
   
 	/**
-	 * Sets up detection of user activity by adding the appropriate event listeners
-	 * and periodically checking for idle time.
+	 * Separate event listener for keyboard activity that filters out
+	 * modifier keys, function keys, etc.
 	 */
+	private detectKeyboardActivityBound = this.detectKeyboardActivity.bind(this);
+	private detectKeyboardActivity(evt: KeyboardEvent): void {
+	  // If a modifier key (cmd, ctrl, alt) is active, ignore.
+	  if (evt.metaKey || evt.ctrlKey || evt.altKey) return;
+  
+	  // If the pressed key is in the ignored set, skip resetting.
+	  if (IdleMonitor.IGNORED_KEYS.has(evt.key)) return;
+  
+	  // If it passes the checks, we treat it as real typing.
+	  this.resetActivity();
+	}
+  
+	/**
+	 * Bound function for mouse activity, if enabled.
+	 */
+	private resetActivityBound = this.resetActivity.bind(this);
+  
 	private detectActivity(): void {
-	  // Remove old listeners to avoid duplicating them
-	  document.removeEventListener('keydown', this.resetActivityBound);
+	  // Remove old listeners if they exist (to avoid duplicates)
+	  document.removeEventListener('keydown', this.detectKeyboardActivityBound);
 	  document.removeEventListener('mousemove', this.resetActivityBound);
   
-	  // Listen for keyboard activity
-	  document.addEventListener('keydown', this.resetActivityBound);
+	  // Add keyboard listener
+	  document.addEventListener('keydown', this.detectKeyboardActivityBound);
   
-	  // Conditionally listen for mouse activity
+	  // Conditionally add mouse listener
 	  if (this.settings.includeMouseActivity) {
 		document.addEventListener('mousemove', this.resetActivityBound);
 	  }
@@ -94,7 +134,7 @@ import {
 		clearInterval(this.checkIdleIntervalId);
 	  }
   
-	  // Periodically check for idle state
+	  // Set an interval to check for idle state
 	  this.checkIdleIntervalId = window.setInterval(() => {
 		const idleTime = Date.now() - this.lastActivityTime;
 		if (idleTime > this.settings.idleThreshold) {
@@ -106,25 +146,12 @@ import {
 	  }, this.settings.checkInterval);
 	}
   
-	/**
-	 * Bound function to reset the lastActivityTime.  
-	 * Helpful to define it once so it can be removed without creating new references each time.
-	 */
-	private resetActivityBound = this.resetActivity.bind(this);
-  
-	/**
-	 * Resets the lastActivityTime to the current time.
-	 */
 	private resetActivity(): void {
 	  this.lastActivityTime = Date.now();
 	  this.statusBarItem.setText('All caught up!');
 	  this.updateStatusBarColor();
 	}
   
-	/**
-	 * Updates the status bar text based on how long the user has been idle.
-	 * @param idleTime - The time in milliseconds since last user activity.
-	 */
 	private updateIdleStatus(idleTime: number): void {
 	  const totalSeconds = Math.floor(idleTime / 1000);
 	  const hours = Math.floor(totalSeconds / 3600);
@@ -144,9 +171,6 @@ import {
 	  this.updateStatusBarColor();
 	}
   
-	/**
-	 * Updates the status bar color or gradient based on the plugin settings (rainbow or static color).
-	 */
 	private updateStatusBarColor(): void {
 	  if (this.settings.rainbowMode) {
 		const gradient = `linear-gradient(
@@ -162,16 +186,11 @@ import {
 		this.statusBarItem.style.webkitBackgroundClip = 'text';
 		this.rainbowGradientStep = (this.rainbowGradientStep + 20) % 360;
 	  } else {
-		// If no color is set, Obsidian’s default is used
 		this.statusBarItem.style.color = this.settings.textColor || '';
 		this.statusBarItem.style.backgroundImage = 'none';
 	  }
 	}
   
-	/**
-	 * Displays a notice about the exact time of last user activity, 
-	 * respecting the user’s 12-hour or 24-hour format preference.
-	 */
 	private showLastActivityTime(): void {
 	  const lastActivityDate = new Date(this.lastActivityTime);
 	  const timeString = lastActivityDate.toLocaleTimeString(undefined, {
@@ -183,25 +202,15 @@ import {
 	  new Notice(`You stopped typing at: ${timeString}`);
 	}
   
-	/**
-	 * Loads plugin settings from Obsidian’s persistent storage.
-	 */
 	private async loadSettings(): Promise<void> {
 	  this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
   
-	/**
-	 * Saves the current plugin settings to Obsidian’s persistent storage.
-	 */
 	public async saveSettings(): Promise<void> {
 	  await this.saveData(this.settings);
 	}
   }
   
-  /**
-   * A settings tab that allows users to configure the idle threshold, 
-   * check interval, and other plugin options.
-   */
   class IdleNotifierSettingTab extends PluginSettingTab {
 	private readonly plugin: IdleMonitor;
   
@@ -210,9 +219,6 @@ import {
 	  this.plugin = plugin;
 	}
   
-	/**
-	 * Renders the setting tab UI elements inside Obsidian's settings panel.
-	 */
 	public display(): void {
 	  const { containerEl } = this;
 	  containerEl.empty();
@@ -227,7 +233,6 @@ import {
 			.setValue(this.plugin.settings.idleThreshold.toString())
 			.onChange(async (value: string) => {
 			  const parsedValue = parseInt(value, 10);
-			  // Safely update or revert to default if invalid
 			  this.plugin.settings.idleThreshold = Number.isNaN(parsedValue)
 				? DEFAULT_SETTINGS.idleThreshold
 				: parsedValue;
@@ -244,7 +249,6 @@ import {
 			.setValue(this.plugin.settings.checkInterval.toString())
 			.onChange(async (value: string) => {
 			  const parsedValue = parseInt(value, 10);
-			  // Safely update or revert to default if invalid
 			  this.plugin.settings.checkInterval = Number.isNaN(parsedValue)
 				? DEFAULT_SETTINGS.checkInterval
 				: parsedValue;
@@ -261,7 +265,6 @@ import {
 			.onChange(async (value: boolean) => {
 			  this.plugin.settings.includeMouseActivity = value;
 			  await this.plugin.saveSettings();
-			  // Re-detect with updated mouse-activity preference
 			  this.plugin.detectActivity();
 			})
 		);

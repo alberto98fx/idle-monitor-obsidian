@@ -2,6 +2,11 @@
 
 Idle Monitor is an Obsidian plugin that tracks user activity and provides real-time feedback when you stop typing or moving your mouse. It includes customizable options to display idle time, adjust settings for activity monitoring, and showcase a beautiful rainbow gradient for the status text.
 
+## Screenshots
+
+![](/images/settings.png?raw=true)
+![](/images/status-bar.png?raw=true)
+
 ## Features
 
 - **Idle Time Tracking**: Notifies you how long you've been idle.
@@ -14,13 +19,6 @@ Idle Monitor is an Obsidian plugin that tracks user activity and provides real-t
   - Enable a glowing rainbow gradient effect for idle status.
 - **Status Bar Display**: View the idle status directly in the Obsidian status bar.
 - **Tooltip for Last Activity**: Hover over the status bar to see the exact time you stopped typing.
-
-## Installation
-
-1. Download the latest release from the [Releases page](#).
-2. Place the plugin files in your Obsidian `plugins` folder.
-   - This folder is typically located at `.obsidian/plugins/` within your vault directory.
-3. Enable the plugin from the **Settings** → **Community Plugins** menu in Obsidian.
 
 ## Usage
 
