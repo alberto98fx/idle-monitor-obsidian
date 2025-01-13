@@ -1,10 +1,10 @@
 {
-	"id": "Idle-Monitor",
-	"name": "Idle Monitor Plugin",
-	"version": "1.0.0",
+	"id": "idle-monitor",
+	"name": "Idle Monitor",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin that tells you when you stopped typing",
 	"author": "alberto98fx",
-	"authorUrl": "https://github.com/alberto98fx/idle-monitor-obsidian",
+	"authorUrl": "https://github.com/alberto98fx",
 	"isDesktopOnly": true
 }
