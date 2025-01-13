@@ -6,6 +6,12 @@ import {
 	Setting,
   } from 'obsidian';
   
+  /**
+   * Import our external stylesheet. Your bundler must be configured
+   * to handle CSS imports for this to work properly (e.g., rollup-plugin-postcss).
+   */
+  import './styles.css';
+  
   interface IdleMonitorSettings {
 	idleThreshold: number;
 	checkInterval: number;
@@ -28,11 +34,16 @@ import {
 	private settings: IdleMonitorSettings;
 	private lastActivityTime: number;
 	private checkIdleIntervalId: number | null = null;
-	private statusBarItem: HTMLElement;
 	private rainbowGradientStep: number;
   
 	/**
+	 * This is where we store the reference to our status bar element.
+	 */
+	private statusBarItem: HTMLElement;
+  
+	/**
 	 * A set of keys that will be ignored for resetting idle time.
+	 * (e.g., Shift, Meta, Ctrl, F1-F12, etc.)
 	 */
 	private static readonly IGNORED_KEYS = new Set([
 	  'Shift',
@@ -58,37 +69,41 @@ import {
 	  'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12',
 	]);
   
-	async onload(): Promise<void> {
+	/**
+	 * The main onload lifecycle method for Obsidian plugins.
+	 */
+	public async onload(): Promise<void> {
 	  await this.loadSettings();
   
 	  this.lastActivityTime = Date.now();
 	  this.rainbowGradientStep = 0;
   
-	  // Initialize idle detection
+	  // Initialize activity detection
 	  this.detectActivity();
   
-	  // Create and configure status bar item
+	  // Create the status bar item and apply our custom CSS class
 	  this.statusBarItem = this.addStatusBarItem();
-	  this.statusBarItem.addEventListener('mouseenter', this.showLastActivityTime.bind(this));
-	  this.updateStatusBarColor();
+	  this.statusBarItem.addClass('idle-monitor-status-bar'); 
 	  this.statusBarItem.setText('All caught up!');
-  
-	  // Optional ribbon icon
-	  const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', () => {
-		new Notice('This is a notice!');
-	  });
-	  ribbonIconEl.addClass('my-plugin-ribbon-class');
+	  
+	  // Register hover listener
+	  this.statusBarItem.addEventListener('mouseenter', this.showLastActivityTime.bind(this));
+	  
+	  // Set initial color/gradient
+	  this.updateStatusBarColor();
   
 	  // Add settings tab
 	  this.addSettingTab(new IdleNotifierSettingTab(this.app, this));
 	}
   
-	onunload(): void {
-	  // Remove event listeners
+	/**
+	 * Plugin unload lifecycle method.
+	 * Remove any event listeners or intervals here to prevent memory leaks.
+	 */
+	public onunload(): void {
 	  document.removeEventListener('keydown', this.detectKeyboardActivityBound);
 	  document.removeEventListener('mousemove', this.resetActivityBound);
   
-	  // Clear the idle check interval
 	  if (this.checkIdleIntervalId !== null) {
 		clearInterval(this.checkIdleIntervalId);
 		this.checkIdleIntervalId = null;
@@ -96,8 +111,8 @@ import {
 	}
   
 	/**
-	 * Separate event listener for keyboard activity that filters out
-	 * modifier keys, function keys, etc.
+	 * Ensures we only treat "real typing" as activity by filtering out
+	 * shortcuts, function keys, etc.
 	 */
 	private detectKeyboardActivityBound = this.detectKeyboardActivity.bind(this);
 	private detectKeyboardActivity(evt: KeyboardEvent): void {
@@ -107,34 +122,33 @@ import {
 	  // If the pressed key is in the ignored set, skip resetting.
 	  if (IdleMonitor.IGNORED_KEYS.has(evt.key)) return;
   
-	  // If it passes the checks, we treat it as real typing.
+	  // Otherwise, treat as real typing
 	  this.resetActivity();
 	}
   
 	/**
-	 * Bound function for mouse activity, if enabled.
+	 * Optional mouse activity reset, if enabled in settings.
 	 */
 	private resetActivityBound = this.resetActivity.bind(this);
   
 	private detectActivity(): void {
-	  // Remove old listeners if they exist (to avoid duplicates)
+	  // Clean up old listeners
 	  document.removeEventListener('keydown', this.detectKeyboardActivityBound);
 	  document.removeEventListener('mousemove', this.resetActivityBound);
   
-	  // Add keyboard listener
+	  // Add new listeners
 	  document.addEventListener('keydown', this.detectKeyboardActivityBound);
   
-	  // Conditionally add mouse listener
 	  if (this.settings.includeMouseActivity) {
 		document.addEventListener('mousemove', this.resetActivityBound);
 	  }
   
-	  // Clear old interval if it exists
+	  // Clear previous interval if exists
 	  if (this.checkIdleIntervalId !== null) {
 		clearInterval(this.checkIdleIntervalId);
 	  }
   
-	  // Set an interval to check for idle state
+	  // Start a new interval to check idle state
 	  this.checkIdleIntervalId = window.setInterval(() => {
 		const idleTime = Date.now() - this.lastActivityTime;
 		if (idleTime > this.settings.idleThreshold) {
@@ -171,26 +185,50 @@ import {
 	  this.updateStatusBarColor();
 	}
   
+	/**
+	 * Applies either rainbow gradient styling or a static color 
+	 * depending on user settings. 
+	 * 
+	 * Here, if `rainbowMode` is true, we rely on in-code style manipulations. 
+	 * Otherwise, we just set the `color` property, letting external CSS handle the rest.
+	 */
 	private updateStatusBarColor(): void {
 	  if (this.settings.rainbowMode) {
+		this.statusBarItem.removeClass('idle-monitor-status-bar'); // optional if you want to remove base styling
+  
+		// Create dynamic rainbow effect
 		const gradient = `linear-gradient(
-		  90deg, 
-		  hsl(${this.rainbowGradientStep}, 100%, 50%), 
-		  hsl(${(this.rainbowGradientStep + 15) % 360}, 100%, 50%), 
+		  90deg,
+		  hsl(${this.rainbowGradientStep}, 100%, 50%),
+		  hsl(${(this.rainbowGradientStep + 15) % 360}, 100%, 50%),
 		  hsl(${(this.rainbowGradientStep + 30) % 360}, 100%, 50%)
 		)`;
+  
 		this.statusBarItem.style.backgroundImage = gradient;
 		this.statusBarItem.style.color = 'transparent';
 		this.statusBarItem.style.backgroundClip = 'text';
 		// @ts-expect-error: WebKit-specific property
 		this.statusBarItem.style.webkitBackgroundClip = 'text';
+  
 		this.rainbowGradientStep = (this.rainbowGradientStep + 20) % 360;
 	  } else {
-		this.statusBarItem.style.color = this.settings.textColor || '';
+		// Re-apply or retain base class
+		this.statusBarItem.addClass('idle-monitor-status-bar'); 
+		
+		// If user set a custom color, apply it
+		if (this.settings.textColor) {
+		  this.statusBarItem.style.color = this.settings.textColor;
+		} else {
+		  // or let CSS define the default
+		  this.statusBarItem.style.color = '';
+		}
 		this.statusBarItem.style.backgroundImage = 'none';
 	  }
 	}
   
+	/**
+	 * Show a Notice with the exact time user became idle (12h or 24h format).
+	 */
 	private showLastActivityTime(): void {
 	  const lastActivityDate = new Date(this.lastActivityTime);
 	  const timeString = lastActivityDate.toLocaleTimeString(undefined, {
@@ -202,15 +240,24 @@ import {
 	  new Notice(`You stopped typing at: ${timeString}`);
 	}
   
+	/**
+	 * Load settings from persistent storage.
+	 */
 	private async loadSettings(): Promise<void> {
 	  this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
   
+	/**
+	 * Save settings to persistent storage.
+	 */
 	public async saveSettings(): Promise<void> {
 	  await this.saveData(this.settings);
 	}
   }
   
+  /**
+   * Settings tab for configuring idle threshold, intervals, etc.
+   */
   class IdleNotifierSettingTab extends PluginSettingTab {
 	private readonly plugin: IdleMonitor;
   

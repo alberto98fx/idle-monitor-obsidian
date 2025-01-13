@@ -1,0 +1,16 @@
+/* styles.css */
+
+/* Example class for your status bar item */
+.idle-monitor-status-bar {
+    padding: 0 8px;
+    background: transparent; /* Let plugin logic handle rainbow or specific color if needed */
+    cursor: default;
+  }
+  
+  /* If you want to define a rainbow-mode class or other special classes, you can add more here */
+  .idle-monitor-rainbow-text {
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  
