@@ -3,7 +3,7 @@
 	"name": "Idle Monitor",
 	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin that tells you when you stopped typing",
+	"description": "Get notified when you stop typing to stay motivated.",
 	"author": "alberto98fx",
 	"authorUrl": "https://github.com/alberto98fx",
 	"isDesktopOnly": true
