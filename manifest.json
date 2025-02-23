@@ -1,10 +1,10 @@
 {
-	"id": "idle-monitor",
-	"name": "Idle Monitor",
-	"version": "1.0.4",
-	"minAppVersion": "0.15.0",
-	"description": "Get notified when you stop typing to stay motivated.",
-	"author": "alberto98fx",
-	"authorUrl": "https://github.com/alberto98fx",
-	"isDesktopOnly": true
+  "id": "idle-monitor",
+  "name": "Idle Monitor",
+  "version": "1.0.5",
+  "minAppVersion": "0.15.0",
+  "description": "Get notified when you stop typing to stay motivated.",
+  "author": "alberto98fx",
+  "authorUrl": "https://github.com/alberto98fx",
+  "isDesktopOnly": true
 }
